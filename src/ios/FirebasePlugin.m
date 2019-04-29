@@ -257,6 +257,27 @@ static FirebasePlugin *firebasePlugin;
     }
 }
 
+- (void)sendLocalNotification:(NSDictionary *)userInfo {
+    UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+    content.title = @"Title";
+    content.subtitle = @"Subtitle";
+    content.body = @"Body";
+    content.userInfo = userInfo;
+
+    NSString *requestIdentifier = @"whatever";
+    UNNotificationRequest *request =
+        [UNNotificationRequest requestWithIdentifier:requestIdentifier
+                               content:content
+                               trigger:NULL];
+
+    [UNUserNotificationCenter.currentNotificationCenter
+        addNotificationRequest:request
+        withCompletionHandler: ^(NSError * _Nullable error) {
+            NSLog(@"%@", error.description);
+            // TODO: Handle error
+        }];
+}
+
 - (void)sendToken:(NSString *)token {
     if (self.tokenRefreshCallbackId != nil) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:token];

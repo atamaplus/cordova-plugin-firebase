@@ -125,6 +125,7 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
     NSDictionary *mutableUserInfo = [userInfo mutableCopy];
 
+    // TODO: Verify that tap is set to NO when in background
     [mutableUserInfo setValue:self.applicationInBackground forKey:@"tap"];
 
     // Print full message.
@@ -135,6 +136,9 @@
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
     fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+
+    // Create local notification here, based on text in data payload
+    [FirebasePlugin.firebasePlugin sendLocalNotification:userInfo];
 
     NSDictionary *mutableUserInfo = [userInfo mutableCopy];
 
@@ -151,6 +155,8 @@
 - (void)messaging:(FIRMessaging *)messaging didReceiveMessage:(FIRMessagingRemoteMessage *)remoteMessage {
     NSLog(@"Received data message: %@", remoteMessage.appData);
 
+    [FirebasePlugin.firebasePlugin sendLocalNotification:remoteMessage.appData];
+
     // This will allow us to handle FCM data-only push messages even if the permission for push
     // notifications is yet missing. This will only work when the app is in the foreground.
     [FirebasePlugin.firebasePlugin sendNotification:remoteMessage.appData];
@@ -166,12 +172,18 @@
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
 
+    if ([notification.request.content.userInfo objectForKey:@"notificationTitle"] != NULL) {
+        // send local notification and do not call other handlers
+        completionHandler(UNNotificationPresentationOptionAlert);
+        return;
+    }
+
     [self.delegate userNotificationCenter:center
               willPresentNotification:notification
                 withCompletionHandler:completionHandler];
 
-    if (![notification.request.trigger isKindOfClass:UNPushNotificationTrigger.class])
-        return;
+    // if (![notification.request.trigger isKindOfClass:UNPushNotificationTrigger.class])
+    //     return;
 
     NSDictionary *mutableUserInfo = [notification.request.content.userInfo mutableCopy];
 
@@ -180,6 +192,7 @@
     // Print full message.
     NSLog(@"%@", mutableUserInfo);
 
+    // This displays the notification to user:
     completionHandler(UNNotificationPresentationOptionAlert);
     [FirebasePlugin.firebasePlugin sendNotification:mutableUserInfo];
 }
@@ -192,8 +205,10 @@
        didReceiveNotificationResponse:response
                 withCompletionHandler:completionHandler];
 
-    if (![response.notification.request.trigger isKindOfClass:UNPushNotificationTrigger.class])
-        return;
+    // Done below: Also send tapped local notifications to Firebase plugin, so we can handle the tap
+
+    // if (![response.notification.request.trigger isKindOfClass:UNPushNotificationTrigger.class])
+    //     return;
 
     NSDictionary *mutableUserInfo = [response.notification.request.content.userInfo mutableCopy];
 
